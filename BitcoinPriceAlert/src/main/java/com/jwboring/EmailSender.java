@@ -13,7 +13,7 @@ import javax.mail.internet.MimeMessage;
 public class EmailSender {
 
 	private final String username = "jwboring@gmail.com";
-	private final String password = "eppggkxmoqghysii";
+	private final String password = "";
 	private Properties prop = new Properties();
 
 	private boolean disabled = false;
