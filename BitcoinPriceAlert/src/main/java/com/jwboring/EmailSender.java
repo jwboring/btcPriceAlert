@@ -13,7 +13,6 @@ import javax.mail.internet.MimeMessage;
 public class EmailSender {
 
 	private final String username = "jwboring@gmail.com";
-	private final String password = "";
 	private Properties prop = new Properties();
 
 	private boolean disabled = false;
@@ -38,7 +37,7 @@ public class EmailSender {
 	}
 
 	public void send(String subject, String text) {
-
+		String password = System.getProperty(BitcoinPriceAlert.EMAILSESSIONPASSWORD);
 		Session session = Session.getInstance(prop, new javax.mail.Authenticator() {
 			protected PasswordAuthentication getPasswordAuthentication() {
 				return new PasswordAuthentication(username, password);

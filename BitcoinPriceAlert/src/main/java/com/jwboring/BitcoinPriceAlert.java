@@ -7,6 +7,7 @@ import java.awt.Toolkit;
 import java.awt.TrayIcon;
 import java.awt.TrayIcon.MessageType;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +17,8 @@ import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
+import org.jasypt.properties.EncryptableProperties;
 import org.json.JSONObject;
 
 import okhttp3.Call;
@@ -31,11 +34,16 @@ public class BitcoinPriceAlert {
 	//TODO Add sms notification
 	// https://www.tech-recipes.com/internet/instant-messaging/sms_email_cingular_nextel_sprint_tmobile_verizon_virgin/
 
+	
+	
 	public static final String WATCH_COMMAND = "WATCH";
 	public static final String QUIT_COMMAND = "QUIT";
 	public static final String LIST_COMMAND = "LIST";
 	public static final long PERIOD = 60 * 1000; // 30 sec
 	public static final String BITCOIN_PRICE_ENDPOINT = "https://api.coindesk.com/v1/bpi/currentprice.json";
+	public static final String PROPERTIESFILE = "BitcoinPriceAlert.properties";
+	public static final String SECRETKEY = "secretKey";
+	public static final String EMAILSESSIONPASSWORD= "emailSessionPassword";
 	private OkHttpClient client = new OkHttpClient();
 	private Timer timer;
 	private List<Price> pricesToWatch;
@@ -54,7 +62,7 @@ public class BitcoinPriceAlert {
 			 app = new BitcoinPriceAlert(false);
 		}
 		
-		
+		app.loadProperites();
 		app.launchTimer();
 		app.scanConsole();
 	}
@@ -80,6 +88,25 @@ public class BitcoinPriceAlert {
 		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("47000.00").floatValue()));
 		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("48000.00").floatValue()));
 		
+	}
+	
+	private void loadProperites() {
+		try (InputStream input = BitcoinPriceAlert.class.getClassLoader().getResourceAsStream(PROPERTIESFILE)) {
+
+			StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();   
+			encryptor.setPassword(System.getProperty(SECRETKEY)); // set via -D
+			EncryptableProperties prop = new EncryptableProperties(encryptor);
+
+            if (input == null) {
+                System.out.println("Sorry, unable to find config.properties");
+                return;
+            }
+            prop.load(input);
+            System.setProperty("emailSessionPassword", prop.getProperty("emailSessionPassword"));
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
 	}
 
 	private void scanConsole() {
