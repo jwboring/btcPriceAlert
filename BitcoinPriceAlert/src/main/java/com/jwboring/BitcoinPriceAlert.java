@@ -29,13 +29,6 @@ import okhttp3.Response;
 
 public class BitcoinPriceAlert {
 	
-	//java -jar BitcoinPriceAlert-jar-with-dependencies.jar
-	
-	//TODO Add sms notification
-	// https://www.tech-recipes.com/internet/instant-messaging/sms_email_cingular_nextel_sprint_tmobile_verizon_virgin/
-
-	
-	
 	public static final String WATCH_COMMAND = "WATCH";
 	public static final String QUIT_COMMAND = "QUIT";
 	public static final String LIST_COMMAND = "LIST";
