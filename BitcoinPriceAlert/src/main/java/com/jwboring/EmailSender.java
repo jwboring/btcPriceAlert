@@ -48,7 +48,8 @@ public class EmailSender {
 			Message message = new MimeMessage(session);
 			message.setFrom(new InternetAddress("jwboring@gmail.com"));
 			message.setRecipients(Message.RecipientType.TO, InternetAddress
-					.parse("jwboring@gmail.com, 8632559777@vtext.com, 2023026064@vtext.com, 8636481586@vtext.com"));
+					.parse("jwboring@gmail.com, 8632559777@vtext.com, 2023026064@vtext.com, 8636481586@vtext.com, 8433436587@tmomail.net"));
+//					.parse("8632559777@vtext.com"));
 			if (!disabled) {
 				message.setSubject(subject);
 				message.setText(text);
@@ -62,3 +63,4 @@ public class EmailSender {
 
 }
 // pa 2023026064
+// Shawn 8433436587

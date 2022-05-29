@@ -65,21 +65,6 @@ public class BitcoinPriceAlert {
 		sender = new EmailSender(disabled);
 		
 		pricesToWatch = new ArrayList<Price>(0);
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("40000.00").floatValue()));
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("40400.00").floatValue()));
-		
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("39000.00").floatValue()));
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("41000.00").floatValue()));
-		
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("38000.00").floatValue()));
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("42000.00").floatValue()));
-		
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("43000.00").floatValue()));
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("44000.00").floatValue()));
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("45000.00").floatValue()));
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("46000.00").floatValue()));
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("47000.00").floatValue()));
-		pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("48000.00").floatValue()));
 		
 	}
 	
@@ -211,8 +196,10 @@ public class BitcoinPriceAlert {
 		String emailMsg = " | Current price = " + currentPrice + "\n";
 		System.out.println(LocalDateTime.now() + emailMsg);
 		if (firstTime) {
-			sender.send("Starting BTC Price Alert", emailMsg);
+//			sender.send("Starting BTC Price Alert", emailMsg);						//disable here
 			firstTime = false;
+			adjustWatchlist(currentPrice);
+			
 		}
 
 		// we check if one price is reached
@@ -225,10 +212,51 @@ public class BitcoinPriceAlert {
 				displayNotification("Bitcoin Watcher", message);
 				// remove from list to watch
 				it.remove();
+//				if (priceToWatch.type==Price.Type.DOWN) 
+//					adjust down
+//				else
+//					adjust up
+					
+				
+				adjustWatchlist(currentPrice);
 			}
-
 		}
+		
+		
 	}
+	
+	
+	private void adjustWatchlist(float theCurrent) {
+		
+		pricesToWatch = new ArrayList<Price>(0);
+		float d;
+		Price down1;
+		float u;
+		Price up1;
+		
+		/** Down 1000, rounded to 1000 */
+		d = Math.round((theCurrent - 1000)/1000)*1000;
+		down1 = new Price(theCurrent, d);
+		pricesToWatch.add(down1);
+		
+		/** Down 500, rounded to 100 */
+		d = Math.round((theCurrent - 500)/100)*100;
+		down1 = new Price(theCurrent, d);
+		pricesToWatch.add(down1);
+		
+		
+		/** up 1000, rounded to 1000 */
+		u = Math.round((theCurrent + 1000)/1000)*1000;
+		up1 = new Price(theCurrent, u);
+		pricesToWatch.add(up1);
+		
+		/** up 500, rounded to 100 */
+		u = Math.round((theCurrent + 500)/100)*100;
+		up1 = new Price(theCurrent, u);
+		pricesToWatch.add(up1);
+		
+	}
+	
 
 	public void displayNotification(String title, String message) {
 		sender.send(title, message);
@@ -257,3 +285,23 @@ public class BitcoinPriceAlert {
 	}
 
 }
+
+
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("27000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("28000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("29000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("30000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("31000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("32000.00").floatValue()));
+
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("38000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("39000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("40000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("41000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("42000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("43000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("44000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("45000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("46000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("47000.00").floatValue()));
+//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("48000.00").floatValue()));

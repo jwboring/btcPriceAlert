@@ -38,4 +38,30 @@ public class Price {
     type = Float.compare(current, target) < 0 ? Type.UP : Type.DOWN;
   }
 
+@Override
+public int hashCode() {
+	final int prime = 31;
+	int result = 1;
+	result = prime * result + Float.floatToIntBits(target);
+	return result;
+}
+
+@Override
+public boolean equals(Object obj) {
+	if (this == obj)
+		return true;
+	if (obj == null)
+		return false;
+	if (getClass() != obj.getClass())
+		return false;
+	Price other = (Price) obj;
+	if (Float.floatToIntBits(target) != Float.floatToIntBits(other.target))
+		return false;
+	return true;
+}
+  
+  
+  
+  
+
 }
