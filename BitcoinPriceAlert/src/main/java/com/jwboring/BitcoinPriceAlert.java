@@ -32,7 +32,10 @@ public class BitcoinPriceAlert {
 	public static final String WATCH_COMMAND = "WATCH";
 	public static final String QUIT_COMMAND = "QUIT";
 	public static final String LIST_COMMAND = "LIST";
-	public static final long PERIOD = 60 * 1000; // 30 sec
+	
+	/** In Milliseconds 60,000 = 60 sec or 1 min */
+	public static long PERIOD = 60 * 1000;
+	
 	public static final String BITCOIN_PRICE_ENDPOINT = "https://api.coindesk.com/v1/bpi/currentprice.json";
 	public static final String PROPERTIESFILE = "BitcoinPriceAlert.properties";
 	public static final String SECRETKEY = "secretKey";
@@ -81,6 +84,9 @@ public class BitcoinPriceAlert {
             }
             prop.load(input);
             System.setProperty("emailSessionPassword", prop.getProperty("emailSessionPassword"));
+            String ckPriceEveryXms = prop.getProperty("ckPriceEveryXms", "60000");
+            PERIOD = Long.parseLong(ckPriceEveryXms);
+            
         } catch (IOException ex) {
             ex.printStackTrace();
         }
