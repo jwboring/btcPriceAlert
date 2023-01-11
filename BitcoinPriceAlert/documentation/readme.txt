@@ -1,4 +1,4 @@
-
+release_0.01
 
 
 //java -jar BitcoinPriceAlert-jar-with-dependencies.jar
