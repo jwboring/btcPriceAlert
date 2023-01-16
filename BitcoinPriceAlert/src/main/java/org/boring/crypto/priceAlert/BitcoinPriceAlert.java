@@ -1,4 +1,4 @@
-package com.jwboring;
+package org.boring.crypto.priceAlert;
 
 import java.awt.AWTException;
 import java.awt.Image;
@@ -7,19 +7,21 @@ import java.awt.Toolkit;
 import java.awt.TrayIcon;
 import java.awt.TrayIcon.MessageType;
 import java.io.IOException;
-import java.io.InputStream;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
-import org.jasypt.properties.EncryptableProperties;
+import javax.annotation.PostConstruct;
+
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -27,83 +29,66 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
+
+@Component(value="bitcoinPriceAlert")
+@Scope (value="singleton")
 public class BitcoinPriceAlert {
+	
+	/** In Milliseconds 60,000 = 60 sec or 1 min */
+	@Value("${ckPriceEveryXms}") private long ckPriceEveryXms;
+	
+	@Autowired
+	private EmailSender emailSender;
+
+	
+	private String[] commandsToEnd = new String[] {"QUIT", "BYE" , "EXIT"};
 	
 	public static final String WATCH_COMMAND = "WATCH";
 	public static final String QUIT_COMMAND = "QUIT";
 	public static final String LIST_COMMAND = "LIST";
 	
-	/** In Milliseconds 60,000 = 60 sec or 1 min */
-	public static long PERIOD = 60 * 1000;
+	
 	
 	public static final String BITCOIN_PRICE_ENDPOINT = "https://api.coindesk.com/v1/bpi/currentprice.json";
-	public static final String PROPERTIESFILE = "BitcoinPriceAlert.properties";
-	public static final String SECRETKEY = "secretKey";
-	public static final String EMAILSESSIONPASSWORD= "emailSessionPassword";
+	
 	private OkHttpClient client = new OkHttpClient();
 	private Timer timer;
 	private List<Price> pricesToWatch;
 	private float currentPrice;
-	
 	private boolean firstTime = true; 
-	private EmailSender sender;
-
-	public static void main(String[] args) {
-		BitcoinPriceAlert app = null;
+	
+	
+	private boolean matches(String[] commands, String inCommand) {
 		
-		if (!Arrays.asList(args).isEmpty() && args[0] != null) {
-			app = new BitcoinPriceAlert(Boolean.valueOf(args[0]));
+		for (String cmd : commands) {
+			if (inCommand.startsWith(cmd))
+				return true;
 		}
-		else {
-			 app = new BitcoinPriceAlert(false);
-		}
-		
-		app.loadProperites();
-		app.launchTimer();
-		app.scanConsole();
-	}
-
-	public BitcoinPriceAlert(boolean disabled) {
-		
-		sender = new EmailSender(disabled);
-		
-		pricesToWatch = new ArrayList<Price>(0);
-		
+		return false;
 	}
 	
-	private void loadProperites() {
-		try (InputStream input = BitcoinPriceAlert.class.getClassLoader().getResourceAsStream(PROPERTIESFILE)) {
-
-			StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();   
-			encryptor.setPassword(System.getProperty(SECRETKEY)); // set via -D
-			EncryptableProperties prop = new EncryptableProperties(encryptor);
-
-            if (input == null) {
-                System.out.println("Sorry, unable to find config.properties");
-                return;
-            }
-            prop.load(input);
-            System.setProperty("emailSessionPassword", prop.getProperty("emailSessionPassword"));
-            String ckPriceEveryXms = prop.getProperty("ckPriceEveryXms", "60000");
-            PERIOD = Long.parseLong(ckPriceEveryXms);
-            
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-
+	
+	@PostConstruct
+	public void init() {
+		pricesToWatch = new ArrayList<Price>(0);
+		launchTimer();
+		scanConsole();
 	}
-
+	
 	private void scanConsole() {
 		String command = null;
 		Scanner scanner = new Scanner(System.in);
 
-		while (!QUIT_COMMAND.equals(command)) {
+		while (true) {
 			String line = scanner.nextLine();
 			line = line.toUpperCase();
 
-			if (line.startsWith(QUIT_COMMAND)) {
-				command = QUIT_COMMAND;
+			if (matches(commandsToEnd,line)) {
+//				command = QUIT_COMMAND;
 				System.out.println("Goodbye!");
+				break;
+				
+				
 			} else if (line.startsWith(LIST_COMMAND)) {
 				command = LIST_COMMAND;
 				listPricesToWatch();
@@ -136,9 +121,7 @@ public class BitcoinPriceAlert {
 						}
 						break;
 					}
-
 				}
-
 			}
 		}
 
@@ -181,7 +164,7 @@ public class BitcoinPriceAlert {
 					}
 				});
 			}
-		}, 0, PERIOD);
+		}, 0, ckPriceEveryXms);
 	}
 
 	private void cancelTimer() {
@@ -200,7 +183,10 @@ public class BitcoinPriceAlert {
 		currentPrice = jsonObject.getJSONObject("bpi").getJSONObject("USD").getFloat("rate_float");
 		
 		String emailMsg = " | Current price = " + currentPrice + "\n";
-		System.out.println(LocalDateTime.now() + emailMsg);
+		System.out.println(Price.DT_FORMAT.format(ZonedDateTime.now()) + emailMsg);
+		
+		
+		
 		if (firstTime) {
 //			sender.send("Starting BTC Price Alert", emailMsg);						//disable here
 			firstTime = false;
@@ -265,7 +251,7 @@ public class BitcoinPriceAlert {
 	
 
 	public void displayNotification(String title, String message) {
-		sender.send(title, message);
+		emailSender.send(title, message);
 		if (SystemTray.isSupported()) {
 			// Obtain only one instance of the SystemTray object
 			SystemTray tray = SystemTray.getSystemTray();
@@ -292,22 +278,3 @@ public class BitcoinPriceAlert {
 
 }
 
-
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("27000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("28000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("29000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("30000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("31000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("32000.00").floatValue()));
-
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("38000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("39000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("40000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("41000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("42000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("43000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("44000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("45000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("46000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("47000.00").floatValue()));
-//pricesToWatch.add(new Price(Float.valueOf("39880.00").floatValue(), Float.valueOf("48000.00").floatValue()));
