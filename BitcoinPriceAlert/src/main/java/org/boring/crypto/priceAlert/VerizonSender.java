@@ -15,16 +15,20 @@ import javax.mail.internet.MimeMessage;
 
 import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 import org.jasypt.properties.EncryptableProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-@Component(value="emailSender")
+@Component(value="verizonSender")
 @Scope (value="singleton")
-public class EmailSender {
+public class VerizonSender implements Sender {
 	
 	private Properties mailProperties = new Properties();
 	public static final String PROPERTIESFILE = "BitcoinPriceAlert.properties";
+	
+	@Autowired
+	private User user;
 	
 	@Value("${mailboxUserEmail}") private String mailboxUserEmail;
 	@Value("${emailSessionPassword}") private String emailSessionPassword;
@@ -40,7 +44,7 @@ public class EmailSender {
 		mailProperties.put("mail.smtp.starttls.enable", "true"); // TLS
 		System.out.println("Send email/text disable status="+isMsgSenderDisabled);
 		
-		try (InputStream input = EmailSender.class.getClassLoader().getResourceAsStream(PROPERTIESFILE)) {
+		try (InputStream input = VerizonSender.class.getClassLoader().getResourceAsStream(PROPERTIESFILE)) {
 			StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
 			encryptor.setPassword(secretKey);
 			EncryptableProperties prop = new EncryptableProperties(encryptor);
@@ -57,7 +61,7 @@ public class EmailSender {
 		}
 	}
 
-	public void send(String subject, String text) {
+	private void send(String subject, String text) {
 		String password = System.getProperty("emailSessionPassword");
 		Session session = Session.getInstance(mailProperties, new javax.mail.Authenticator() {
 			protected PasswordAuthentication getPasswordAuthentication() {
@@ -65,14 +69,14 @@ public class EmailSender {
 			}
 		});
 		try {
-
-			Message message = new MimeMessage(session);
-			message.setFrom(new InternetAddress(mailboxUserEmail));
-			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse("jwboring@gmail.com, 8632559777@vzwpix.com"));
-			message.setSubject(subject);
-			message.setText(text);
-			transportSend(message);
-			
+			for(String phone:user.getUserPhoneNumbers()) {
+				Message message = new MimeMessage(session);
+				message.setFrom(new InternetAddress(mailboxUserEmail));
+				message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(phone+"@vzwpix.com"));
+				message.setSubject(subject);
+				message.setText(text);
+				transportSend(message);
+			}
 		} catch (MessagingException e) {
 			e.printStackTrace();
 		}
@@ -82,6 +86,12 @@ public class EmailSender {
 		if (!isMsgSenderDisabled) {
 			Transport.send(message);
 		}
+	}
+
+	@Override
+	public void sendMsg(String toPhone, String subject, String message) {
+		send(subject, message);
+		
 	}
 
 }

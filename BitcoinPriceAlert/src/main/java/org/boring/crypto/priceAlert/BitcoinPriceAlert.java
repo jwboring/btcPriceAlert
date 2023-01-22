@@ -19,6 +19,7 @@ import javax.annotation.PostConstruct;
 
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -37,9 +38,12 @@ public class BitcoinPriceAlert {
 	/** In Milliseconds 60,000 = 60 sec or 1 min */
 	@Value("${ckPriceEveryXms}") private long ckPriceEveryXms;
 	
+	
+//	private Sender sender;
+	
 	@Autowired
-	private EmailSender emailSender;
-
+	@Qualifier("verizonSender")
+	private Sender sender;
 	
 	private String[] commandsToEnd = new String[] {"QUIT", "BYE" , "EXIT"};
 	
@@ -251,7 +255,7 @@ public class BitcoinPriceAlert {
 	
 
 	public void displayNotification(String title, String message) {
-		emailSender.send(title, message);
+		sender.sendMsg("", title, message);
 		if (SystemTray.isSupported()) {
 			// Obtain only one instance of the SystemTray object
 			SystemTray tray = SystemTray.getSystemTray();
