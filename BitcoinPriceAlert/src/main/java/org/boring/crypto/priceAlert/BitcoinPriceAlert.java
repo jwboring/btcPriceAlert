@@ -6,14 +6,12 @@ import java.awt.SystemTray;
 import java.awt.Toolkit;
 import java.awt.TrayIcon;
 import java.awt.TrayIcon.MessageType;
-import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import javax.annotation.PostConstruct;
 
@@ -24,39 +22,35 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-
 
 @Component(value="bitcoinPriceAlert")
 @Scope (value="singleton")
-public class BitcoinPriceAlert {
+public class BitcoinPriceAlert implements PriceChangeListener {
 	
-	/** In Milliseconds 60,000 = 60 sec or 1 min */
-	@Value("${ckPriceEveryXms}") private long ckPriceEveryXms;
-	
-	
-//	private Sender sender;
 	
 	@Autowired
 	@Qualifier("verizonSender")
 	private Sender sender;
 	
+	@Autowired
+	private CoindeskBtcPriceWatcher bitcoinWatcher;
+	
+	
+	/** In Milliseconds 60,000 = 60 sec or 1 min */
+	@Value("${ckPriceEveryXms}") private long ckPriceEveryXms;
+	
+	@Value("${coindeskEndpoint}") private String coindeskEndpoint;
+	
+	
+	
 	private String[] commandsToEnd = new String[] {"QUIT", "BYE" , "EXIT"};
+	public DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("MM/dd/yyyy 'at' hh:mm a z");
+	
 	
 	public static final String WATCH_COMMAND = "WATCH";
 	public static final String QUIT_COMMAND = "QUIT";
 	public static final String LIST_COMMAND = "LIST";
 	
-	
-	
-	public static final String BITCOIN_PRICE_ENDPOINT = "https://api.coindesk.com/v1/bpi/currentprice.json";
-	
-	private OkHttpClient client = new OkHttpClient();
-	private Timer timer;
 	private List<Price> pricesToWatch;
 	private float currentPrice;
 	private boolean firstTime = true; 
@@ -75,7 +69,7 @@ public class BitcoinPriceAlert {
 	@PostConstruct
 	public void init() {
 		pricesToWatch = new ArrayList<Price>(0);
-		launchTimer();
+		bitcoinWatcher.addListener(this);
 		scanConsole();
 	}
 	
@@ -130,7 +124,6 @@ public class BitcoinPriceAlert {
 		}
 
 		scanner.close();
-		cancelTimer();
 		System.exit(0);
 	}
 
@@ -148,48 +141,13 @@ public class BitcoinPriceAlert {
 		System.out.println();
 	}
 
-	private void launchTimer() {
-		timer = new Timer();
-		timer.schedule(new TimerTask() {
 
-			@Override
-			public void run() {
-				loadBitcoinPrice(new Callback() {
-
-					@Override
-					public void onResponse(Call call, Response response) throws IOException {
-						String str = response.body().string();
-						parseBitcoinPrice(str);
-					}
-
-					@Override
-					public void onFailure(Call call, IOException ioe) {
-
-					}
-				});
-			}
-		}, 0, ckPriceEveryXms);
-	}
-
-	private void cancelTimer() {
-		if (timer != null) {
-			timer.cancel();
-		}
-	}
-
-	private void loadBitcoinPrice(Callback callback) {
-		Request request = new Request.Builder().url(BITCOIN_PRICE_ENDPOINT).build();
-		client.newCall(request).enqueue(callback);
-	}
-
-	private void parseBitcoinPrice(String str) {
-		JSONObject jsonObject = new JSONObject(str);
+	public void priceChange(String priceChange) {
+		JSONObject jsonObject = new JSONObject(priceChange);
 		currentPrice = jsonObject.getJSONObject("bpi").getJSONObject("USD").getFloat("rate_float");
 		
 		String emailMsg = " | Current price = " + currentPrice + "\n";
-		System.out.println(Price.DT_FORMAT.format(ZonedDateTime.now()) + emailMsg);
-		
-		
+		System.out.println(DT_FORMAT.format(ZonedDateTime.now()) + emailMsg);
 		
 		if (firstTime) {
 //			sender.send("Starting BTC Price Alert", emailMsg);						//disable here
@@ -206,19 +164,10 @@ public class BitcoinPriceAlert {
 				String message = priceToWatch.type.msg(currentPrice, priceToWatch.target);
 				System.out.println(message);
 				displayNotification("Bitcoin Watcher", message);
-				// remove from list to watch
-				it.remove();
-//				if (priceToWatch.type==Price.Type.DOWN) 
-//					adjust down
-//				else
-//					adjust up
-					
-				
+				it.remove(); // remove from list to watch
 				adjustWatchlist(currentPrice);
 			}
 		}
-		
-		
 	}
 	
 	

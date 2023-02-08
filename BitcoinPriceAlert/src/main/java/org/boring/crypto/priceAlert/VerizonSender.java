@@ -86,6 +86,9 @@ public class VerizonSender implements Sender {
 		if (!isMsgSenderDisabled) {
 			Transport.send(message);
 		}
+		else
+			System.out.println("not sent, message sender is disabled");
+			
 	}
 
 	@Override
